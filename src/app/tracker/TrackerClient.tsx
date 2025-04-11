@@ -14,6 +14,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface FoodItem {
   id: string;
@@ -25,9 +27,10 @@ interface FoodItem {
 
 interface TrackerClientProps {
   initialFoods: FoodItem[];
+  userEmail?: string | null;
 }
 
-export default function TrackerClient({ initialFoods }: TrackerClientProps) {
+export default function TrackerClient({ initialFoods, userEmail }: TrackerClientProps) {
   const [foodName, setFoodName] = useState("");
   const [grams, setGrams] = useState("");
   const [period, setPeriod] = useState("morning");
@@ -84,9 +87,38 @@ export default function TrackerClient({ initialFoods }: TrackerClientProps) {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        return;
+      }
+      router.push('/auth/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Eat Your Calories</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Eat Your Calories</h1>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <span className="text-sm text-muted-foreground">{userEmail}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </Button>
+        </div>
+      </div>
       
       <Card className="p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Add Food</h2>

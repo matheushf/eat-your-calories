@@ -17,10 +17,11 @@ export default async function TrackerPage() {
     }
   )
 
+  const { data: { session } } = await supabase.auth.getSession()
   const { data: foods } = await supabase
     .from('food_items')
     .select('*')
     .order('created_at', { ascending: true })
 
-  return <TrackerClient initialFoods={foods || []} />
+  return <TrackerClient initialFoods={foods || []} userEmail={session?.user.email} />
 } 
