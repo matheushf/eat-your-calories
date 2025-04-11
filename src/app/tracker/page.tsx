@@ -1,0 +1,26 @@
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import TrackerClient from './TrackerClient'
+
+export default async function TrackerPage() {
+  const cookieStore = cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      }
+    }
+  )
+
+  const { data: foods } = await supabase
+    .from('food_items')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  return <TrackerClient initialFoods={foods || []} />
+} 
