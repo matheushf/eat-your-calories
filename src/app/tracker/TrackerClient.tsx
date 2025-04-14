@@ -14,9 +14,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Trash2, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface FoodItem {
   id: string;
@@ -31,60 +37,85 @@ interface TrackerClientProps {
   userEmail?: string | null;
 }
 
-export default function TrackerClient({ initialFoods, userEmail }: TrackerClientProps) {
+export default function TrackerClient({
+  initialFoods,
+  userEmail,
+}: TrackerClientProps) {
   const [foodName, setFoodName] = useState("");
   const [grams, setGrams] = useState("");
   const [period, setPeriod] = useState("morning");
   const router = useRouter();
   const supabase = createClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleAddFood = async () => {
     if (!foodName || !grams || !period) return;
     const { data: user } = await supabase.auth.getUser();
-    
+
     try {
-      const { error } = await supabase
-        .from('food_items')
-        .insert([{
+      const { error } = await supabase.from("food_items").insert([
+        {
           name: foodName,
           grams: parseInt(grams),
           period: period,
           is_completed: false,
-          user_id: user.user?.id
-        }]);
+          user_id: user.user?.id,
+        },
+      ]);
 
       if (error) {
-        console.error('Error adding food item:', error);
+        console.error("Error adding food item:", error);
         return;
       }
 
       // Refresh the page to get the latest data
       router.refresh();
-      
+
       // Clear form
       setFoodName("");
       setGrams("");
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
   const toggleFoodCompletion = async (id: string, isCompleted: boolean) => {
     try {
       const { error } = await supabase
-        .from('food_items')
+        .from("food_items")
         .update({ is_completed: !isCompleted })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) {
-        console.error('Error updating food item:', error);
+        console.error("Error updating food item:", error);
         return;
       }
 
       // Refresh the page to get the latest data
       router.refresh();
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
+    }
+  };
+
+  const handleDeleteFood = async (id: string) => {
+    try {
+      setDeletingId(id);
+      const { error } = await supabase
+        .from("food_items")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error deleting food item:", error);
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -92,13 +123,13 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error("Error signing out:", error);
         return;
       }
-      router.push('/auth/login');
+      router.push("/auth/login");
       router.refresh();
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
@@ -121,9 +152,11 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
                 <SheetHeader>
                   <SheetTitle>Menu</SheetTitle>
                 </SheetHeader>
-                <div className="flex flex-col gap-4 mt-8">
+                <div className="flex flex-col gap-4 p-4">
                   <div className="flex flex-col gap-2 pb-4 border-b">
-                    <p className="text-sm text-muted-foreground">Signed in as</p>
+                    <p className="text-sm text-muted-foreground">
+                      Signed in as
+                    </p>
                     <p className="text-sm font-medium">{userEmail}</p>
                   </div>
                   <Button
@@ -172,20 +205,28 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
           <h2 className="text-lg font-semibold mb-4">Add Food</h2>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
             <div className="flex flex-col sm:flex-row sm:items-center flex-1">
-              <label htmlFor="foodName" className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden">
+              <label
+                htmlFor="foodName"
+                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
+              >
                 Food name
               </label>
               <Input
                 id="foodName"
                 placeholder="Food name"
                 value={foodName}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFoodName(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFoodName(e.target.value)
+                }
                 className="flex-1"
               />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <label htmlFor="calories" className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden">
+              <label
+                htmlFor="calories"
+                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
+              >
                 Grams
               </label>
               <Input
@@ -193,13 +234,18 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
                 placeholder="Grams"
                 type="number"
                 value={grams}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setGrams(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setGrams(e.target.value)
+                }
                 className="w-full sm:w-24"
               />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <label htmlFor="period" className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden">
+              <label
+                htmlFor="period"
+                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
+              >
                 Period
               </label>
               <Select value={period} onValueChange={setPeriod}>
@@ -226,16 +272,38 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
             <div key={mealTime} className="mb-6 last:mb-0">
               <h2 className="text-lg font-semibold mb-2">{mealTime}</h2>
               {initialFoods
-                .filter((food) => food.period.toLowerCase() === mealTime.toLowerCase())
+                .filter(
+                  (food) => food.period.toLowerCase() === mealTime.toLowerCase()
+                )
                 .map((food) => (
-                  <div key={food.id} className="flex items-center gap-2 mb-2">
-                    <Checkbox
-                      checked={food.is_completed}
-                      onCheckedChange={() => toggleFoodCompletion(food.id, food.is_completed)}
-                    />
-                    <span className={food.is_completed ? "line-through" : ""}>
-                      {food.name} {food.grams}
-                    </span>
+                  <div key={food.id} className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={food.is_completed}
+                        onCheckedChange={() =>
+                          toggleFoodCompletion(food.id, food.is_completed)
+                        }
+                      />
+                      <span className={food.is_completed ? "line-through" : ""}>
+                        {food.name} - {food.grams}g
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteFood(food.id)}
+                      disabled={deletingId === food.id}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      {deletingId === food.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">
+                        {deletingId === food.id ? "Deleting..." : `Delete ${food.name}`}
+                      </span>
+                    </Button>
                   </div>
                 ))}
             </div>
@@ -244,4 +312,4 @@ export default function TrackerClient({ initialFoods, userEmail }: TrackerClient
       </div>
     </>
   );
-} 
+}
