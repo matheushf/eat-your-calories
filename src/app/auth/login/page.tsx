@@ -21,7 +21,6 @@ export default function LoginPage() {
     setError(null);
 
     try {
-        console.log("login", email, password);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -41,34 +40,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      setError("Check your email for the confirmation link");
-    } catch {
-      setError("An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
+  const handleSignUp = () => {
+    router.push("/auth/signup");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-6">
-        <h1 className="text-2xl font-bold mb-6">Welcome to Eat Your Calories</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center text-primary">Eat Your Calories</h1>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <Input
@@ -91,22 +70,21 @@ export default function LoginPage() {
           {error && (
             <div className="text-red-500 text-sm">{error}</div>
           )}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Loading..." : "Login"}
-            </Button>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Signing in..." : "Sign in"}
+          </Button>
+          <div className="text-center">
             <Button
               type="button"
+              variant="ghost"
               onClick={handleSignUp}
-              disabled={loading}
-              variant="outline"
-              className="flex-1"
+              className="text-primary hover:text-primary/80"
             >
-              Sign Up
+              Don't have an account? Sign up
             </Button>
           </div>
         </form>
       </Card>
     </div>
   );
-} 
+}
