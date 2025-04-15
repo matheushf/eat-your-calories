@@ -23,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { getAiSuggestions } from "@/app/actions/getAiSuggestions";
 
 interface FoodItem {
   id: string;
@@ -47,6 +48,12 @@ export default function TrackerClient({
   const router = useRouter();
   const supabase = createClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [carbs, setCarbs] = useState("");
+  const [protein, setProtein] = useState("");
+  const [fat, setFat] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const handleAddFood = async () => {
     if (!foodName || !grams || !period) return;
@@ -101,10 +108,7 @@ export default function TrackerClient({
   const handleDeleteFood = async (id: string) => {
     try {
       setDeletingId(id);
-      const { error } = await supabase
-        .from("food_items")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("food_items").delete().eq("id", id);
 
       if (error) {
         console.error("Error deleting food item:", error);
@@ -130,6 +134,36 @@ export default function TrackerClient({
       router.refresh();
     } catch (error) {
       console.error("Error:", error);
+    }
+  };
+
+  const handleGetAiSuggestions = async () => {
+    if (!carbs || !protein || !fat) {
+      setAiError("Please fill in all macronutrient values");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError(null);
+    setAiSuggestions(null);
+
+    try {
+      const { suggestions, error } = await getAiSuggestions({
+        carbs: parseInt(carbs),
+        protein: parseInt(protein),
+        fat: parseInt(fat),
+      });
+
+      if (error) {
+        setAiError(error);
+        return;
+      }
+
+      setAiSuggestions(suggestions);
+    } catch (error) {
+      setAiError("Failed to get suggestions");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -201,14 +235,12 @@ export default function TrackerClient({
 
       {/* Main Content */}
       <div className="container mx-auto p-6 max-w-2xl mt-16 sm:mt-0">
+        {/* Add Food Section */}
         <Card className="p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Add Food</h2>
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
-            <div className="flex flex-col sm:flex-row sm:items-center flex-1">
-              <label
-                htmlFor="foodName"
-                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
-              >
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col flex-1 gap-2">
+              <label htmlFor="foodName" className="text-sm font-medium">
                 Food name
               </label>
               <Input
@@ -218,41 +250,33 @@ export default function TrackerClient({
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setFoodName(e.target.value)
                 }
-                className="flex-1"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <label
-                htmlFor="calories"
-                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
-              >
+            <div className="flex flex-col gap-2">
+              <label htmlFor="grams" className="text-sm font-medium">
                 Grams
               </label>
               <Input
-                id="calories"
+                id="grams"
                 placeholder="Grams"
                 type="number"
                 value={grams}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setGrams(e.target.value)
                 }
-                className="w-full sm:w-24"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <label
-                htmlFor="period"
-                className="text-sm font-medium mb-2 sm:mb-0 sm:mr-2 sm:hidden"
-              >
+            <div className="flex flex-col flex-1 gap-2">
+              <label htmlFor="period" className="text-sm font-medium">
                 Period
               </label>
               <Select value={period} onValueChange={setPeriod}>
-                <SelectTrigger id="period" className="w-full sm:w-32">
+                <SelectTrigger id="period" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-full min-w-[8rem]">
                   <SelectItem value="morning">Morning</SelectItem>
                   <SelectItem value="lunch">Lunch</SelectItem>
                   <SelectItem value="afternoon">Afternoon</SelectItem>
@@ -260,13 +284,82 @@ export default function TrackerClient({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <Button onClick={handleAddFood} className="w-full">
+            Add Food
+          </Button>
+        </Card>
 
-            <Button onClick={handleAddFood} className="w-full sm:w-auto">
-              Add
+        {/* AI Suggestions Section */}
+        <Card className="p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Get AI Suggestions</h2>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="carbs" className="text-sm font-medium">
+                  Carbohydrates (g)
+                </label>
+                <Input
+                  id="carbs"
+                  type="number"
+                  placeholder="e.g., 50"
+                  value={carbs}
+                  onChange={(e) => setCarbs(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="protein" className="text-sm font-medium">
+                  Protein (g)
+                </label>
+                <Input
+                  id="protein"
+                  type="number"
+                  placeholder="e.g., 30"
+                  value={protein}
+                  onChange={(e) => setProtein(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="fat" className="text-sm font-medium">
+                  Fat (g)
+                </label>
+                <Input
+                  id="fat"
+                  type="number"
+                  placeholder="e.g., 20"
+                  value={fat}
+                  onChange={(e) => setFat(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleGetAiSuggestions}
+              disabled={aiLoading}
+              className="w-full"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Getting suggestions...
+                </>
+              ) : (
+                "Get AI ideas"
+              )}
             </Button>
+
+            {aiError && <p className="text-sm text-destructive">{aiError}</p>}
+            {aiSuggestions && (
+              <div className="p-4 bg-muted rounded-lg">
+                <pre className="whitespace-pre-wrap text-sm">
+                  {aiSuggestions}
+                </pre>
+              </div>
+            )}
           </div>
         </Card>
 
+        {/* Food List Card */}
         <Card className="p-6">
           {["Morning", "Lunch", "Afternoon", "Dinner"].map((mealTime) => (
             <div key={mealTime} className="mb-6 last:mb-0">
@@ -276,7 +369,10 @@ export default function TrackerClient({
                   (food) => food.period.toLowerCase() === mealTime.toLowerCase()
                 )
                 .map((food) => (
-                  <div key={food.id} className="flex items-center justify-between gap-2 mb-2">
+                  <div
+                    key={food.id}
+                    className="flex items-center justify-between gap-2 mb-2"
+                  >
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={food.is_completed}
@@ -301,7 +397,9 @@ export default function TrackerClient({
                         <Trash2 className="h-4 w-4" />
                       )}
                       <span className="sr-only">
-                        {deletingId === food.id ? "Deleting..." : `Delete ${food.name}`}
+                        {deletingId === food.id
+                          ? "Deleting..."
+                          : `Delete ${food.name}`}
                       </span>
                     </Button>
                   </div>
