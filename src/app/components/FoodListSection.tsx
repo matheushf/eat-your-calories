@@ -156,7 +156,7 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
                     name: e.target.value
                   }
                 })}
-                className="flex-1"
+                className="w-30 sm:flex-1"
               />
               <Input
                 placeholder="unit"
