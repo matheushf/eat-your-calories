@@ -12,9 +12,8 @@ import {
 } from "@/components/ui/sheet";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
-import { AddFoodSection } from "@/app/components/AddFoodSection";
-import { AISuggestionsSection } from "@/app/components/AISuggestionsSection";
-import { FoodListSection } from "@/app/components/FoodListSection";
+import { AISuggestionsSection } from "@/app/tracker/components/AISuggestionsSection";
+import { FoodListSection } from "@/app/tracker/components/FoodListSection";
 
 interface FoodItem {
   id: string;
@@ -118,7 +117,6 @@ export default function TrackerClient({
 
       {/* Main Content */}
       <div className="container mx-auto p-6 max-w-2xl mt-16 sm:mt-0">
-        <AddFoodSection />
         <AISuggestionsSection />
         <FoodListSection initialFoods={initialFoods} />
       </div>
