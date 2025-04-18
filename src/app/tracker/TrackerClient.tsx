@@ -10,11 +10,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { createClient } from "@/utils/supabase";
+import { logout } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import { AISuggestionsSection } from "@/app/tracker/components/AISuggestionsSection";
 import { FoodListSection } from "@/app/tracker/components/FoodListSection";
 import { Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 interface FoodItem {
   id: string;
@@ -34,19 +35,19 @@ export default function TrackerClient({
   userEmail,
 }: TrackerClientProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Error signing out:", error);
-        return;
-      }
-      router.push("/auth/login");
+      await logout();
       router.refresh();
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error signing out:", error);
+      if (error instanceof Error && error.message.includes("Auth session")) {
+        router.push("/auth/login");
+        router.refresh();
+      } else {
+        toast.error("Failed to sign out");
+      }
     }
   };
 
