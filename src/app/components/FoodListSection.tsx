@@ -187,7 +187,7 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
                     }
                   });
                 }}
-                className="w-30"
+                className="w-20"
               />
               <Button 
                 type="submit" 
