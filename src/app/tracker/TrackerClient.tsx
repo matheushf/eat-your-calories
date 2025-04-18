@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
 import { AISuggestionsSection } from "@/app/tracker/components/AISuggestionsSection";
 import { FoodListSection } from "@/app/tracker/components/FoodListSection";
+import { Toaster } from "react-hot-toast";
 
 interface FoodItem {
   id: string;
@@ -120,6 +121,8 @@ export default function TrackerClient({
         <AISuggestionsSection />
         <FoodListSection initialFoods={initialFoods} />
       </div>
+
+      <Toaster />
     </>
   );
 }

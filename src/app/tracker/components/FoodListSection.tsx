@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase";
-import { useRouter } from "next/navigation";
 import { Loader2, PlusIcon } from "lucide-react";
 import { FoodListItem } from "./FoodListItem";
-import { quickAddFood } from "@/app/actions/food";
+import { quickAddFood, updateFood, toggleFoodCompletion, deleteFood } from "@/app/actions/food";
+import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 interface FoodItem {
@@ -21,27 +20,22 @@ interface FoodItem {
 
 interface FoodListSectionProps {
   initialFoods: FoodItem[];
-  date: string;
 }
 
 export function FoodListSection({ initialFoods }: FoodListSectionProps) {
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
   const [editingGrams, setEditingGrams] = useState<string>("");
   const [editingUnit, setEditingUnit] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [quickAdd, setQuickAdd] = useState<{
-    [key: string]: { name: string; grams: string; unit: string }
-  }>({
+  const [quickAdd, setQuickAdd] = useState<{[key: string]: { name: string; grams: string; unit: string }}>({
     morning: { name: '', grams: '', unit: '' },
     lunch: { name: '', grams: '', unit: '' },
     afternoon: { name: '', grams: '', unit: '' },
     dinner: { name: '', grams: '', unit: '' }
   });
   const [addingPeriod, setAddingPeriod] = useState<string | null>(null);
-  
-  const router = useRouter();
-  const supabase = createClient();
 
   const handleQuickAdd = async (period: string) => {
     const { name, grams, unit } = quickAdd[period.toLowerCase()];
@@ -57,16 +51,17 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
       formData.append('period', period.toLowerCase());
       
       await quickAddFood(formData);
-
+      
       setQuickAdd({
         ...quickAdd,
         [period.toLowerCase()]: { name: '', grams: '', unit: '' }
       });
       
+      router.refresh();
       toast.success('Food added successfully');
     } catch (error) {
       console.error('Failed to add food:', error);
-      toast.error('Failed to add food item');
+      toast.error('Failed to add food');
     } finally {
       setAddingPeriod(null);
     }
@@ -74,57 +69,38 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
 
   const handleUpdateFood = async (id: string, updates: { name?: string; grams?: number | null; unit?: string | null }) => {
     try {
-      const { error } = await supabase
-        .from("food_items")
-        .update(updates)
-        .eq("id", id);
-
-      if (error) {
-        console.error("Error updating food item:", error);
-        return;
-      }
-
+      await updateFood(id, updates);
       setEditingId(null);
       setEditingName("");
       setEditingGrams("");
       setEditingUnit("");
       router.refresh();
+      toast.success('Food updated successfully');
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Failed to update food:', error);
+      toast.error('Failed to update food');
     }
   };
 
-  const toggleFoodCompletion = async (id: string, isCompleted: boolean) => {
+  const handleToggleCompletion = async (id: string, isCompleted: boolean) => {
     try {
-      const { error } = await supabase
-        .from("food_items")
-        .update({ is_completed: !isCompleted })
-        .eq("id", id);
-
-      if (error) {
-        console.error("Error updating food item:", error);
-        return;
-      }
-
+      await toggleFoodCompletion(id, isCompleted);
       router.refresh();
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Failed to toggle food completion:', error);
+      toast.error('Failed to update food');
     }
   };
 
   const handleDeleteFood = async (id: string) => {
     try {
       setDeletingId(id);
-      const { error } = await supabase.from("food_items").delete().eq("id", id);
-
-      if (error) {
-        console.error("Error deleting food item:", error);
-        return;
-      }
-
+      await deleteFood(id);
       router.refresh();
+      toast.success('Food deleted successfully');
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Failed to delete food:', error);
+      toast.error('Failed to delete food');
     } finally {
       setDeletingId(null);
     }
@@ -212,7 +188,7 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
                 editingGrams={editingGrams}
                 editingUnit={editingUnit}
                 deletingId={deletingId}
-                onToggleComplete={toggleFoodCompletion}
+                onToggleComplete={handleToggleCompletion}
                 onDelete={handleDeleteFood}
                 onUpdate={handleUpdateFood}
                 setEditingId={setEditingId}
