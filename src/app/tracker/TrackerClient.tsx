@@ -14,7 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
-import { LogOut, Menu, Trash2, Loader2 } from "lucide-react";
+import { LogOut, Menu, Trash2, Loader2, Pencil, Check } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sheet,
@@ -33,6 +33,13 @@ interface FoodItem {
   is_completed: boolean;
 }
 
+interface AISuggestion {
+  foodName: string;
+  amount: string;
+  grams: string;
+  macronutrients: string;
+}
+
 interface TrackerClientProps {
   initialFoods: FoodItem[];
   userEmail?: string | null;
@@ -45,6 +52,7 @@ export default function TrackerClient({
   const [foodName, setFoodName] = useState("");
   const [grams, setGrams] = useState("");
   const [period, setPeriod] = useState("morning");
+  const [aiPeriod, setAiPeriod] = useState("morning");
   const router = useRouter();
   const supabase = createClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -52,8 +60,16 @@ export default function TrackerClient({
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[] | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingGrams, setEditingGrams] = useState<string>("");
+  const [quickAdd, setQuickAdd] = useState<{[key: string]: { name: string; grams: string }}>({
+    morning: { name: '', grams: '' },
+    lunch: { name: '', grams: '' },
+    afternoon: { name: '', grams: '' },
+    dinner: { name: '', grams: '' }
+  });
 
   const handleAddFood = async () => {
     if (!foodName || !grams || !period) return;
@@ -138,8 +154,8 @@ export default function TrackerClient({
   };
 
   const handleGetAiSuggestions = async () => {
-    if (!carbs || !protein || !fat) {
-      setAiError("Please fill in all macronutrient values");
+    if (!carbs && !protein && !fat) {
+      setAiError("Please fill at least one macronutrient value");
       return;
     }
 
@@ -149,6 +165,7 @@ export default function TrackerClient({
 
     try {
       const { suggestions, error } = await getAiSuggestions({
+        time: aiPeriod,
         carbs: parseInt(carbs),
         protein: parseInt(protein),
         fat: parseInt(fat),
@@ -159,11 +176,91 @@ export default function TrackerClient({
         return;
       }
 
-      setAiSuggestions(suggestions);
+      // Parse the JSON string and extract ingredients
+      const parsedSuggestions = JSON.parse(suggestions);
+      setAiSuggestions(parsedSuggestions.ingredients);
     } catch (error) {
       setAiError("Failed to get suggestions");
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleAddAiSuggestion = async (suggestion: AISuggestion) => {
+    const { data: user } = await supabase.auth.getUser();
+
+    try {
+      const { error } = await supabase.from("food_items").insert([
+        {
+          name: suggestion.foodName,
+          grams: parseInt(suggestion.grams),
+          period: aiPeriod,
+          is_completed: false,
+          user_id: user.user?.id,
+        },
+      ]);
+
+      if (error) {
+        console.error("Error adding food item:", error);
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleUpdateGrams = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("food_items")
+        .update({ grams: parseInt(editingGrams) })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error updating food item:", error);
+        return;
+      }
+
+      setEditingId(null);
+      setEditingGrams("");
+      router.refresh();
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleQuickAdd = async (period: string) => {
+    const { name, grams } = quickAdd[period.toLowerCase()];
+    if (!name || !grams) return;
+
+    const { data: user } = await supabase.auth.getUser();
+
+    try {
+      const { error } = await supabase.from("food_items").insert([
+        {
+          name: name,
+          grams: parseInt(grams),
+          period: period.toLowerCase(),
+          is_completed: false,
+          user_id: user.user?.id,
+        },
+      ]);
+
+      if (error) {
+        console.error("Error adding food item:", error);
+        return;
+      }
+
+      // Clear form and refresh
+      setQuickAdd({
+        ...quickAdd,
+        [period.toLowerCase()]: { name: '', grams: '' }
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("Error:", error);
     }
   };
 
@@ -333,6 +430,23 @@ export default function TrackerClient({
               </div>
             </div>
 
+            <div className="flex flex-col flex-1 gap-2">
+              <label htmlFor="period" className="text-sm font-medium">
+                Period
+              </label>
+              <Select value={aiPeriod} onValueChange={setAiPeriod}>
+                <SelectTrigger id="period" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-full min-w-[8rem]">
+                  <SelectItem value="morning">Morning</SelectItem>
+                  <SelectItem value="lunch">Lunch</SelectItem>
+                  <SelectItem value="afternoon">Afternoon</SelectItem>
+                  <SelectItem value="dinner">Dinner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               onClick={handleGetAiSuggestions}
               disabled={aiLoading}
@@ -344,16 +458,41 @@ export default function TrackerClient({
                   Getting suggestions...
                 </>
               ) : (
-                "Get AI ideas"
+                "Ask AI"
               )}
             </Button>
 
             {aiError && <p className="text-sm text-destructive">{aiError}</p>}
             {aiSuggestions && (
-              <div className="p-4 bg-muted rounded-lg">
-                <pre className="whitespace-pre-wrap text-sm">
-                  {aiSuggestions}
-                </pre>
+              <div className="flex flex-col gap-4">
+                {aiSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">{suggestion.foodName}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {suggestion.amount}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {suggestion.macronutrients}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <span className="text-sm font-medium">
+                        {suggestion.grams}
+                      </span>
+                      <Button
+                        onClick={() => handleAddAiSuggestion(suggestion)}
+                        size="sm"
+                        className="w-full sm:w-auto"
+                      >
+                        Add to {aiPeriod}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -364,6 +503,44 @@ export default function TrackerClient({
           {["Morning", "Lunch", "Afternoon", "Dinner"].map((mealTime) => (
             <div key={mealTime} className="mb-6 last:mb-0">
               <h2 className="text-lg font-semibold mb-2">{mealTime}</h2>
+              <div className="mb-4">
+                <form 
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleQuickAdd(mealTime);
+                  }}
+                >
+                  <Input
+                    placeholder="Food name"
+                    value={quickAdd[mealTime.toLowerCase()].name}
+                    onChange={(e) => setQuickAdd({
+                      ...quickAdd,
+                      [mealTime.toLowerCase()]: {
+                        ...quickAdd[mealTime.toLowerCase()],
+                        name: e.target.value
+                      }
+                    })}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="g"
+                    value={quickAdd[mealTime.toLowerCase()].grams}
+                    onChange={(e) => setQuickAdd({
+                      ...quickAdd,
+                      [mealTime.toLowerCase()]: {
+                        ...quickAdd[mealTime.toLowerCase()],
+                        grams: e.target.value
+                      }
+                    })}
+                    className="w-20"
+                  />
+                  <Button type="submit" size="sm">
+                    Add
+                  </Button>
+                </form>
+              </div>
               {initialFoods
                 .filter(
                   (food) => food.period.toLowerCase() === mealTime.toLowerCase()
@@ -381,27 +558,90 @@ export default function TrackerClient({
                         }
                       />
                       <span className={food.is_completed ? "line-through" : ""}>
-                        {food.name} - {food.grams}g
+                        {food.name} - 
+                        {editingId === food.id ? (
+                          <form 
+                            className="inline-flex items-center gap-2"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              handleUpdateGrams(food.id);
+                            }}
+                          >
+                            <Input
+                              type="number"
+                              value={editingGrams}
+                              onChange={(e) => setEditingGrams(e.target.value)}
+                              className="w-20 h-6 px-1 py-0 text-sm"
+                              autoFocus
+                              onBlur={() => {
+                                if (editingGrams) {
+                                  handleUpdateGrams(food.id);
+                                } else {
+                                  setEditingId(null);
+                                }
+                              }}
+                            />
+                            <span className="text-sm">g</span>
+                          </form>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingId(food.id);
+                              setEditingGrams(food.grams.toString());
+                            }}
+                            className="hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring rounded px-1"
+                          >
+                            {food.grams}g
+                          </button>
+                        )}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteFood(food.id)}
-                      disabled={deletingId === food.id}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    >
-                      {deletingId === food.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">
-                        {deletingId === food.id
-                          ? "Deleting..."
-                          : `Delete ${food.name}`}
-                      </span>
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (editingId === food.id) {
+                            handleUpdateGrams(food.id);
+                          } else {
+                            setEditingId(food.id);
+                            setEditingGrams(food.grams.toString());
+                          }
+                        }}
+                        className={`h-8 w-8 text-muted-foreground ${
+                          editingId === food.id 
+                            ? "hover:text-green-500" 
+                            : "hover:text-primary"
+                        }`}
+                      >
+                        {editingId === food.id ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Pencil className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">
+                          {editingId === food.id ? `Save ${food.name}` : `Edit ${food.name}`}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteFood(food.id)}
+                        disabled={deletingId === food.id}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        {deletingId === food.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">
+                          {deletingId === food.id
+                            ? "Deleting..."
+                            : `Delete ${food.name}`}
+                        </span>
+                      </Button>
+                    </div>
                   </div>
                 ))}
             </div>
