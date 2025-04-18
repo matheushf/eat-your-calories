@@ -8,6 +8,8 @@ import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
 import { Loader2, PlusIcon } from "lucide-react";
 import { FoodListItem } from "./FoodListItem";
+import { quickAddFood } from "@/app/actions/food";
+import { toast } from "react-hot-toast";
 
 interface FoodItem {
   id: string;
@@ -19,6 +21,7 @@ interface FoodItem {
 
 interface FoodListSectionProps {
   initialFoods: FoodItem[];
+  date: string;
 }
 
 export function FoodListSection({ initialFoods }: FoodListSectionProps) {
@@ -27,7 +30,9 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
   const [editingGrams, setEditingGrams] = useState<string>("");
   const [editingUnit, setEditingUnit] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [quickAdd, setQuickAdd] = useState<{[key: string]: { name: string; grams: string; unit: string }}>({
+  const [quickAdd, setQuickAdd] = useState<{
+    [key: string]: { name: string; grams: string; unit: string }
+  }>({
     morning: { name: '', grams: '', unit: '' },
     lunch: { name: '', grams: '', unit: '' },
     afternoon: { name: '', grams: '', unit: '' },
@@ -42,33 +47,26 @@ export function FoodListSection({ initialFoods }: FoodListSectionProps) {
     const { name, grams, unit } = quickAdd[period.toLowerCase()];
     if (!name || (!grams && !unit)) return;
 
-    setAddingPeriod(period.toLowerCase());
-    const { data: user } = await supabase.auth.getUser();
-
     try {
-      const { error } = await supabase.from("food_items").insert([
-        {
-          name: name,
-          grams: grams ? parseInt(grams) : null,
-          unit: unit || null,
-          period: period.toLowerCase(),
-          is_completed: false,
-          user_id: user.user?.id,
-        },
-      ]);
-
-      if (error) {
-        console.error("Error adding food item:", error);
-        return;
-      }
+      setAddingPeriod(period.toLowerCase());
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('grams', grams);
+      formData.append('unit', unit);
+      formData.append('period', period.toLowerCase());
+      
+      await quickAddFood(formData);
 
       setQuickAdd({
         ...quickAdd,
         [period.toLowerCase()]: { name: '', grams: '', unit: '' }
       });
-      router.refresh();
+      
+      toast.success('Food added successfully');
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Failed to add food:', error);
+      toast.error('Failed to add food item');
     } finally {
       setAddingPeriod(null);
     }
