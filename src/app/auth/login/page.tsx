@@ -80,7 +80,7 @@ export default function LoginPage() {
               onClick={handleSignUp}
               className="text-primary hover:text-primary/80"
             >
-              Don't have an account? Sign up
+              {`Don't have an account? Sign up`}
             </Button>
           </div>
         </form>

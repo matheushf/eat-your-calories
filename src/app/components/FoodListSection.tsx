@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
-import { Trash2, Loader2, Pencil, Check, PlusIcon } from "lucide-react";
+import { Loader2, PlusIcon } from "lucide-react";
 import { FoodListItem } from "./FoodListItem";
 
 interface FoodItem {

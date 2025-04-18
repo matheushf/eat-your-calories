@@ -47,6 +47,7 @@ export default function SignUpPage() {
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
+      console.error(err);
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);
