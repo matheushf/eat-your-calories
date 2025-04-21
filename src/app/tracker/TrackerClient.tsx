@@ -14,7 +14,6 @@ import { logout } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import { AISuggestionsSection } from "@/app/tracker/components/AISuggestionsSection";
 import { FoodListSection } from "@/app/tracker/components/FoodListSection";
-import { Toaster } from "react-hot-toast";
 import { toast } from "react-hot-toast";
 
 interface FoodItem {
@@ -123,7 +122,7 @@ export default function TrackerClient({
         <FoodListSection initialFoods={initialFoods} />
       </div>
 
-      <Toaster />
+      
     </>
   );
 }

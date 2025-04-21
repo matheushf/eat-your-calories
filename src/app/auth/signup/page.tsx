@@ -17,11 +17,12 @@ export default function SignupPage() {
     try {
       const formData = new FormData(e.currentTarget);
       await signup(formData);
-      redirect("/auth/confirm-email");
     } catch (error) {
       console.log("Signup failed:", error);
       toast.error("Failed to create account. Please try again.");
+    } finally {
       setIsLoading(false);
+      redirect("/auth/confirm-email");
     }
   };
 
@@ -29,7 +30,7 @@ export default function SignupPage() {
     <div className="container max-w-md mx-auto min-h-screen flex items-center justify-center p-4 sm:p-0">
       <div className="w-full py-8 text-center">
         <h1 className="text-2xl font-bold text-primary mb-4">
-          Eat Your Calories 
+          Eat Your Calories
         </h1>
         <p className="text-gray-400 mb-8">Create your account to get started</p>
         <form onSubmit={handleSubmit} className="space-y-4">
