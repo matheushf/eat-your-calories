@@ -93,3 +93,21 @@ export async function deleteFood(id: string) {
   revalidatePath("/tracker");
   return { success: true };
 }
+
+export async function getFoodsAndSession() {
+  const cookieStore = cookies();
+  const supabase = await createClient(cookieStore);
+
+  const [{ data: { session } }, { data: foods }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabase
+      .from('food_items')
+      .select('*')
+      .order('created_at', { ascending: true })
+  ]);
+
+  return {
+    session,
+    foods: foods || []
+  };
+}
