@@ -39,7 +39,7 @@ export async function signup(formData: FormData) {
       data: {
         name,
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}`,
     },
   });
 
