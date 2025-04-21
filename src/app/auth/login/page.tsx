@@ -27,7 +27,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container max-w-md mx-auto min-h-screen flex items-center justify-center">
+    <div className="container max-w-md mx-auto min-h-screen p-4 sm:p-0 flex items-center justify-center">
       <div className="w-full py-8 text-center">
         <h1 className="text-2xl font-bold text-primary mb-4">Eat Your Calories</h1>
         <p className="text-gray-400 mb-8">Login to your account</p>
