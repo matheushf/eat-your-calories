@@ -17,12 +17,11 @@ export default function SignupPage() {
     try {
       const formData = new FormData(e.currentTarget);
       await signup(formData);
+      redirect("/auth/confirm-email");
     } catch (error) {
       console.log("Signup failed:", error);
       toast.error("Failed to create account. Please try again.");
-    } finally {
       setIsLoading(false);
-      redirect("/tracker");
     }
   };
 

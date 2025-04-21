@@ -11,10 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { getAiSuggestions } from "@/app/actions/getAiSuggestions";
+import { addFoodFromSuggestion } from "@/app/actions/addFoodFromSuggestion";
 
 interface AISuggestion {
   foodName: string;
@@ -32,7 +32,6 @@ export function AISuggestionsSection() {
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[] | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleGetAiSuggestions = async () => {
     if (!carbs && !protein && !fat) {
@@ -69,21 +68,15 @@ export function AISuggestionsSection() {
   };
 
   const handleAddAiSuggestion = async (suggestion: AISuggestion) => {
-    const { data: user } = await supabase.auth.getUser();
-
     try {
-      const { error } = await supabase.from("food_items").insert([
-        {
-          name: suggestion.foodName,
-          grams: parseInt(suggestion.grams),
-          period: aiPeriod,
-          is_completed: false,
-          user_id: user.user?.id,
-        },
-      ]);
+      const result = await addFoodFromSuggestion({
+        name: suggestion.foodName,
+        grams: parseInt(suggestion.grams),
+        period: aiPeriod,
+      });
 
-      if (error) {
-        console.error("Error adding food item:", error);
+      if (!result.success) {
+        console.error("Error adding food item:", result.error);
         return;
       }
 
