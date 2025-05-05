@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { AISuggestionsSection } from "@/app/tracker/components/AISuggestionsSection";
 import { FoodListSection } from "@/app/tracker/components/FoodListSection";
 import { toast } from "react-hot-toast";
+import { SeasonSection } from "@/app/tracker/components/SeasonSection";
 
 interface FoodItem {
   id: string;
@@ -118,8 +119,9 @@ export default function TrackerClient({
 
       {/* Main Content */}
       <div className="container mx-auto p-6 max-w-2xl mt-16 sm:mt-0">
-        <AISuggestionsSection />
         <FoodListSection initialFoods={initialFoods} />
+        <AISuggestionsSection />
+        <SeasonSection />
       </div>
 
       
